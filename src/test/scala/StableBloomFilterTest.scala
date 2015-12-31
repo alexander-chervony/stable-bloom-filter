@@ -9,12 +9,6 @@ import scala.collection.mutable
 
 class StableBloomFilterTest extends WordSpec with Matchers with BeforeAndAfter  {
 
-//  private var sbf: StableBloomFilter[CharSequence] = null
-
-//  before {
-//    sbf = new StableBloomFilter[CharSequence](50, 10, 5, Funnels.stringFunnel(Charsets.UTF_8))
-//  }
-
   "StableBloomFilter" when {
 
     "several items put in filter" should {
@@ -36,7 +30,7 @@ class StableBloomFilterTest extends WordSpec with Matchers with BeforeAndAfter  
 
 
 
-    "20 mln lines file processed" should {
+    "error rates are within acceptable boundaries" should {
 
       val sbf = new StableBloomFilter[CharSequence](64*1024*1024/100, 10, 10, 1, Funnels.stringFunnel(Charsets.UTF_8))
 
@@ -77,7 +71,6 @@ class StableBloomFilterTest extends WordSpec with Matchers with BeforeAndAfter  
 
       "FP rate must be less than 1%" in {
         // FP causes actual distincts to be missing in output stream
-        //val fp = ((actualDistinct - computedDistinct).toFloat/actualDistinct) * 100
         val fp = (fpCount.toFloat/actualDistinct) * 100
         println(s"fpCount = $fpCount")
         println(s"FP % = $fp")
@@ -90,6 +83,56 @@ class StableBloomFilterTest extends WordSpec with Matchers with BeforeAndAfter  
         println(s"fnCount = $fnCount")
         println(s"FN % = $fn")
         fn should be < 1f
+      }
+    }
+
+
+
+
+    "count distinct lines" ignore {
+
+      var actualDistinct = 0
+
+      var fileCount = 0
+      val linesToRead = 1000 * 1000 / 10
+      val lineSet = mutable.Set[String]()
+
+      for (file <- new java.io.File("c:\\temp\\real_data_files\\").listFiles().filter(f => f.getName.contains("20151202_11"))) {
+        fileCount += 1
+
+        for (line0 <- scala.io.Source.fromFile(file).getLines().take(linesToRead)) {
+
+          //val tsMs = line0.substring(0, 13)
+          //val tsSec = line0.substring(0, 10)
+          //val ts10Sec = line0.substring(0, 9)
+
+          //val time = new java.util.Date(tsMs.toLong)
+
+          //time.setSeconds(0)
+          //time.setMinutes(0)
+          // tens of minutes
+          //time.setMinutes(time.getMinutes - time.getMinutes % 10)
+
+          //val line = time.toString + line0.substring(13)
+          //val line = ts10Sec + line0.substring(13)
+          //val line = line0
+          // ignore time
+          val line = line0.substring(13)
+
+          if (!lineSet.contains(line)) {
+            lineSet += line
+            actualDistinct += 1
+          }
+        }
+
+      }
+
+      "output stats" in {
+        val totalLinesRead = linesToRead*fileCount
+        println(s"fileCount   = $fileCount" )
+        println(s"totalLinesRead   = $totalLinesRead" )
+        println(s"actualDistinct %   = ${(actualDistinct.toFloat/totalLinesRead)*100} %" )
+        totalLinesRead should be > 1
       }
     }
 
